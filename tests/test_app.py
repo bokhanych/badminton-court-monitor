@@ -4,7 +4,7 @@ from datetime import date, datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from app import Config, Slot, format_notification, group_slots_by_date, load_state, newly_available, next_weekday_range, parse_slot, relevant_slots, save_state
+from app import Config, Slot, format_notification, group_slots_by_date, load_state, nearest_sunday, newly_available, next_weekday_range, parse_mentioned_date, parse_slot, parse_weekday_command, purchasable_slots, relevant_slots, save_state
 
 TZ = ZoneInfo("Europe/Minsk")
 
@@ -71,6 +71,35 @@ class MonitorTests(unittest.TestCase):
     def test_next_weekday_range(self):
         self.assertEqual(next_weekday_range(date(2026, 9, 3)), (date(2026, 9, 7), date(2026, 9, 11)))
         self.assertEqual(next_weekday_range(date(2026, 9, 7)), (date(2026, 9, 14), date(2026, 9, 18)))
+
+    def test_nearest_sunday(self):
+        self.assertEqual(nearest_sunday(date(2026, 9, 3)), date(2026, 9, 6))
+        self.assertEqual(nearest_sunday(date(2026, 9, 6)), date(2026, 9, 6))
+
+    def test_parse_mentioned_date(self):
+        today = date(2026, 9, 3)
+        self.assertEqual(parse_mentioned_date("@court_bot 07.09", "court_bot", today), date(2026, 9, 7))
+        self.assertEqual(parse_mentioned_date("@court_bot 01.01", "court_bot", today), date(2026, 1, 1))
+        self.assertIsNone(parse_mentioned_date("@court_bot 07.09.2026", "court_bot", today))
+        self.assertIsNone(parse_mentioned_date("@court_bot 2026-09-08", "court_bot", today))
+        self.assertIsNone(parse_mentioned_date("@another_bot 07.09.2026", "court_bot", today))
+        self.assertIsNone(parse_mentioned_date("@court_bot завтра", "court_bot", today))
+
+    def test_requested_schedule_includes_morning_and_daytime(self):
+        now = datetime(2026, 9, 3, 8, tzinfo=TZ)
+        slots = [
+            Slot(1, datetime(2026, 9, 4, 9, tzinfo=TZ), datetime(2026, 9, 4, 10, tzinfo=TZ), True, 1, 2200),
+            Slot(2, datetime(2026, 9, 4, 15, tzinfo=TZ), datetime(2026, 9, 4, 16, tzinfo=TZ), True, 1, 2200),
+            Slot(3, datetime(2026, 9, 4, 19, tzinfo=TZ), datetime(2026, 9, 4, 20, tzinfo=TZ), True, 1, 2400),
+        ]
+        self.assertEqual([slot.event_id for slot in purchasable_slots(slots, now)], [1, 2, 3])
+
+    def test_weekday_commands_use_current_calendar_week(self):
+        today = date(2026, 9, 3)  # Thursday
+        self.assertEqual(parse_weekday_command("/monday", "court_bot", today), date(2026, 8, 31))
+        self.assertEqual(parse_weekday_command("/friday", "court_bot", today), date(2026, 9, 4))
+        self.assertEqual(parse_weekday_command("/sunday@court_bot", "court_bot", today), date(2026, 9, 6))
+        self.assertIsNone(parse_weekday_command("/friday@another_bot", "court_bot", today))
 
 
 if __name__ == "__main__":
