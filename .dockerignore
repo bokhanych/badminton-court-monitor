@@ -1,0 +1,5 @@
+.git
+.env
+.site-chunk.js
+__pycache__
+tests

@@ -1,0 +1,15 @@
+services:
+  monitor:
+    container_name: monitor
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      STATE_FILE: /data/state.json
+    volumes:
+      - monitor_data:/data
+
+volumes:
+  monitor_data:
