@@ -130,11 +130,11 @@ def parse_slot(item: dict[str, Any], timezone: ZoneInfo) -> Slot:
 
 
 def relevant_slots(slots: list[Slot], config: Config, now: datetime) -> list[Slot]:
-    return [s for s in slots if s.start.timetz().replace(tzinfo=None) >= config.evening_start and s.start > now + timedelta(minutes=30)]
+    return [s for s in slots if s.start.timetz().replace(tzinfo=None) >= config.evening_start and s.start > now + timedelta(minutes=180)]
 
 
 def purchasable_slots(slots: list[Slot], now: datetime) -> list[Slot]:
-    return [slot for slot in slots if slot.start > now + timedelta(minutes=30)]
+    return [slot for slot in slots if slot.start > now + timedelta(minutes=180)]
 
 
 def load_state(path: Path) -> dict[str, Any]:
