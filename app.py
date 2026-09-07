@@ -280,8 +280,8 @@ def parse_weekday_command(text: str, bot_username: str, today: date) -> date | N
     addressed_bot = match.group(2)
     if addressed_bot and addressed_bot.casefold() != bot_username.casefold():
         return None
-    week_monday = today - timedelta(days=today.weekday())
-    return week_monday + timedelta(days=WEEKDAY_COMMANDS[match.group(1).lower()])
+    days_ahead = (WEEKDAY_COMMANDS[match.group(1).lower()] - today.weekday()) % 7
+    return today + timedelta(days=days_ahead)
 
 
 def offset_file(config: Config) -> Path:
@@ -319,13 +319,13 @@ def telegram_updates(config: Config, offset: int | None) -> list[dict[str, Any]]
 
 def register_bot_commands(config: Config) -> None:
     descriptions = {
-        "monday": "Свободные корты в понедельник",
-        "tuesday": "Свободные корты во вторник",
-        "wednesday": "Свободные корты в среду",
-        "thursday": "Свободные корты в четверг",
-        "friday": "Свободные корты в пятницу",
-        "saturday": "Свободные корты в субботу",
-        "sunday": "Свободные корты в воскресенье",
+        "monday": "Понедельник",
+        "tuesday": "Вторник",
+        "wednesday": "Среда",
+        "thursday": "Четверг",
+        "friday": "Пятница",
+        "saturday": "Суббота",
+        "sunday": "Воскресенье",
     }
     try:
         response = request_json(

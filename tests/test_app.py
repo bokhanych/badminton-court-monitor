@@ -32,7 +32,7 @@ class MonitorTests(unittest.TestCase):
         self.assertFalse(parse_slot(item, TZ).available)
 
     def test_only_evening_and_not_imminent(self):
-        now = datetime(2026, 9, 4, 17, 45, tzinfo=TZ)
+        now = datetime(2026, 9, 4, 15, 45, tzinfo=TZ)
         slots = [
             Slot(1, datetime(2026, 9, 4, 17, tzinfo=TZ), datetime(2026, 9, 4, 18, tzinfo=TZ), True, 1, 2200),
             Slot(2, datetime(2026, 9, 4, 18, tzinfo=TZ), datetime(2026, 9, 4, 19, tzinfo=TZ), True, 1, 2400),
@@ -94,12 +94,29 @@ class MonitorTests(unittest.TestCase):
         ]
         self.assertEqual([slot.event_id for slot in purchasable_slots(slots, now)], [1, 2, 3])
 
-    def test_weekday_commands_use_current_calendar_week(self):
+    def test_weekday_commands_use_nearest_upcoming_day(self):
         today = date(2026, 9, 3)  # Thursday
-        self.assertEqual(parse_weekday_command("/monday", "court_bot", today), date(2026, 8, 31))
+        self.assertEqual(parse_weekday_command("/monday", "court_bot", today), date(2026, 9, 7))
         self.assertEqual(parse_weekday_command("/friday", "court_bot", today), date(2026, 9, 4))
         self.assertEqual(parse_weekday_command("/sunday@court_bot", "court_bot", today), date(2026, 9, 6))
         self.assertIsNone(parse_weekday_command("/friday@another_bot", "court_bot", today))
+
+    def test_requested_schedule_excludes_past_and_imminent_slots(self):
+        now = datetime(2026, 9, 4, 12, tzinfo=TZ)
+        slots = [
+            Slot(hour, datetime(2026, 9, 4, hour, tzinfo=TZ), datetime(2026, 9, 4, hour + 1, tzinfo=TZ), True, 1, 2200)
+            for hour in (9, 12, 14, 15, 16)
+        ]
+        self.assertEqual([slot.event_id for slot in purchasable_slots(slots, now)], [16])
+
+    def test_friday_requested_on_saturday_is_next_friday(self):
+        self.assertEqual(parse_weekday_command("/friday", "court_bot", date(2026, 9, 5)), date(2026, 9, 11))
+
+    def test_weekday_command_can_request_today(self):
+        self.assertEqual(parse_weekday_command("/friday", "court_bot", date(2026, 9, 4)), date(2026, 9, 4))
+
+    def test_weekday_command_crosses_year_boundary(self):
+        self.assertEqual(parse_weekday_command("/monday", "court_bot", date(2026, 12, 31)), date(2027, 1, 4))
 
 
 if __name__ == "__main__":
